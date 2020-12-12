@@ -17,6 +17,12 @@ from bs4.element import Tag
 
 
 @dataclass
+class BasicUser:
+    name: str
+    score: int
+
+
+@dataclass
 class User:
     """Metacritic user as scraped for the purposes of this script."""
     name: str
@@ -34,7 +40,7 @@ class UserReviewsPageParser:
     """
     def __init__(self, markup: str) -> None:
         self._markup = markup
-        self.name, self.score = self._parse()
+        self.users: List[BasicUser] = self._parse()
 
     @staticmethod
     def _pre_filter(tag: Tag) -> bool:
@@ -59,13 +65,17 @@ class UserReviewsPageParser:
         href = tag.get("href")
         return tag.name == "a" and href and "/user/" in href
 
-    def _parse(self) -> Tuple[str, int]:
-        """Parse input markup for user name and user score.
+    def _parse(self) -> List[BasicUser]:
+        """Parse input markup for user name and user score coupled in basic struct.
         """
+        users = []
         soup = BeautifulSoup(self._markup, "lxml")
         elements = soup.find_all(self._pre_filter)
-        element = elements[0].find(self._filter_name)
-        name = element.text
-        element = elements[0].find(self._filter_score)
-        score = int(element.text)
-        return name, score
+        for element in elements:
+            result = element.find(self._filter_name)
+            name = result.text
+            result = element.find(self._filter_score)
+            score = int(result.text)
+            users.append(BasicUser(name, score))
+
+        return users

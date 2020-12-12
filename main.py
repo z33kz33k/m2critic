@@ -19,7 +19,7 @@ def run():
     # pprint(f"Name: {read_html()}")
     source = Path("data/example.html")
     parser = UserReviewsPageParser(source.read_text())
-    print(str(parser.score), parser.name)
+    pprint(parser.users)
 
 
 if __name__ == '__main__':
