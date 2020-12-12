@@ -13,6 +13,9 @@ import itertools
 from typing import Generator, Optional, Union
 
 
+PREFIX = "https://www.metacritic.com/"
+
+
 class Platform(Enum):
     PC = "pc"
     PLAYSTATION_4 = "playstation-4"
@@ -27,8 +30,7 @@ class Platform(Enum):
 class UserReviewsUrlBuilder:
     """Generate user reviews URLs for scraping.
     """
-    BASEURL_PREFIX = "https://www.metacritic.com/"
-    BASEURL_SUFFIX = "user-reviews"
+    SUFFIX = "user-reviews"
     PAGESTR = "?page="
 
     def __init__(self, is_paginated: bool = True) -> None:
@@ -37,24 +39,18 @@ class UserReviewsUrlBuilder:
 
     # middle is determined in derived classes
     def _geturl(self, middle: str) -> Union[str, Generator[str, None, None]]:
-        prefix = self.BASEURL_PREFIX + middle
+        prefix = PREFIX + middle
         if self.is_paginated:
-            return (f"{prefix}{self.BASEURL_SUFFIX}{self.PAGESTR}{i}" for i in itertools.count())
-        return f"{prefix}{self.BASEURL_SUFFIX}"
+            return (f"{prefix}{self.SUFFIX}{self.PAGESTR}{i}" for i in itertools.count())
+        return f"{prefix}{self.SUFFIX}"
 
 
 class GameUserReviewsUrlBuilder(UserReviewsUrlBuilder):
     """Generate game user reviews URLs for scraping.
+
+    Example (paginated): https://www.metacritic.com/game/pc/cyberpunk-2077/user-reviews?page=0
     """
     def __init__(self, platform: Platform, url_game_name: str, is_paginated: bool = True) -> None:
         super().__init__(is_paginated)
         self.url = self._geturl(middle=f"game/{platform.value}/{url_game_name}/")
         self.platform, self.url_game_name = platform, url_game_name
-
-
-class UserReviewsPageParser:
-    """Parse user reviews page for user names.
-    """
-    def __init__(self) -> None:
-        ...
-
