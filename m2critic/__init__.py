@@ -12,7 +12,7 @@
 
 __author__ = "z33k"
 __contact__ = "zeek@int.pl"
-__version__ = "0.1.3.dev0"
+__version__ = "0.1.4.dev0"
 __description = f"{__name__} is a script that scrapes metacritic.com for user data and " \
                 f"user ratings and then calculated a new cumulative rating that isn't a mundane " \
                 f"average but rather a weighted arithmetic mean where weights are based on " \

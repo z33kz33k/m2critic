@@ -24,7 +24,8 @@ class BasicUser:
 
 @dataclass
 class User:
-    """Metacritic user as scraped for the purposes of this script."""
+    """Metacritic user as scraped for the purposes of this script.
+    """
     name: str
     score: int
     ratingscount: int
@@ -35,11 +36,18 @@ class User:
         return self.reviewscount * 2 + self.ratingscount
 
 
-class UserReviewsPageParser:
-    """Parse user reviews page for user names.
+class PageParser:  # abstract
+    """Abstract page parser.
     """
     def __init__(self, markup: str) -> None:
         self._markup = markup
+
+
+class UserReviewsPageParser(PageParser):
+    """Parse user reviews page for user names.
+    """
+    def __init__(self, markup: str) -> None:
+        super().__init__(markup)
         self.users: List[BasicUser] = self._parse()
 
     @staticmethod
@@ -79,3 +87,45 @@ class UserReviewsPageParser:
             users.append(BasicUser(name, score))
 
         return users
+
+
+class UserPageParser(PageParser):
+    """Parse user page for ratings and reviews counts.
+    """
+    def __init__(self, markup: str) -> None:
+        super().__init__(markup)
+        self.ratingscount, self.reviewscount = self._parse()
+
+    @staticmethod
+    def _filter_ratingscount(tag: Tag) -> bool:
+        """Filter soup for ratings 'span' element.
+        """
+        class_ = tag.get("class")
+        return tag.name == "span" and class_ and "total_summary_ratings" in class_
+
+    @staticmethod
+    def _filter_reviewscount(tag: Tag) -> bool:
+        """Filter soup for reviews 'span' element.
+        """
+        class_ = tag.get("class")
+        return tag.name == "span" and "total_summary_reviews" in class_
+
+    @staticmethod
+    def _filter_data(tag: Tag) -> bool:
+        """Filter relevant 'span' element for data.
+        """
+        return tag.name == "span"
+
+    def _parse(self) -> Tuple[int, int]:
+        """Parse input markup for user name and user score coupled in basic struct.
+        """
+        soup = BeautifulSoup(self._markup, "lxml")
+        result = soup.find(self._filter_ratingscount)
+        newresult = result.find(self._filter_data)
+        ratingscount = int(newresult.text)
+        result = soup.find(self._filter_reviewscount)
+        newresult = result.find(self._filter_data)
+        reviewscount = int(newresult.text)
+
+        return ratingscount, reviewscount
+
