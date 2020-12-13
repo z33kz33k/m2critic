@@ -3,129 +3,46 @@
     m2critic.scrape
     ~~~~~~~~~~~~~~~
 
-    Scrape page.
+    Scrape Metacritic pages.
 
     @author: z33k
 
 """
-from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Tuple
+import random
+import time
+from pprint import pprint
+from typing import List
 
-from bs4 import BeautifulSoup
-from bs4.element import Tag
+import requests
 
-
-@dataclass
-class BasicUser:
-    name: str
-    score: int
+from m2critic import BasicUser, User, GamingPlatform
+from m2critic.url import GameUserReviewsUrlBuilder
+from m2critic.parse import UserReviewsPageParser, UserPageParser
 
 
-@dataclass
-class User:
-    """Metacritic user as scraped for the purposes of this script.
+LATENCY_FLOOR, LATENCY_CEILING = 0.03, 10.0
+
+
+def scrape_pcgame_user_reviews(url_game_name: str) -> List[BasicUser]:
+    """Scrape PC game user reviews page for list of BasicUser structs.
     """
-    name: str
-    score: int
-    ratingscount: int
-    reviewscount: int
+    builder = GameUserReviewsUrlBuilder(GamingPlatform.PC, url_game_name)
+    users = []
+    print(f"Scraping user data from user reviews pages for game: '{url_game_name}' started...")
+    for i, url in enumerate(builder.urls, start=1):
+        # using this trick:
+        # https://stackoverflow.com/questions/34643822/accessing-metacritic-api-and-or-scraping
+        # to avoid getting 403 Forbidden error
+        headermap = {"User-Agent": "Mac Firefox"}
+        markup = requests.get(url, headers=headermap).text
+        try:
+            scraped_users = UserReviewsPageParser(markup).users[:]
+        except ValueError:  # too high page index has been hit
+            break
+        users += scraped_users
+        print(f"\n{'*' * 10} Users batch #{i} {'*' * 10}\n")
+        pprint(scraped_users)
+        time.sleep(random.uniform(LATENCY_FLOOR, LATENCY_CEILING))
 
-    @property
-    def cred(self) -> int:
-        return self.reviewscount * 2 + self.ratingscount
-
-
-class PageParser:  # abstract
-    """Abstract page parser.
-    """
-    def __init__(self, markup: str) -> None:
-        self._markup = markup
-
-
-class UserReviewsPageParser(PageParser):
-    """Parse user reviews page for user names.
-    """
-    def __init__(self, markup: str) -> None:
-        super().__init__(markup)
-        self.users: List[BasicUser] = self._parse()
-
-    @staticmethod
-    def _pre_filter(tag: Tag) -> bool:
-        """Pre-filter soup search for relevant 'li' elements.
-        """
-        id_ = tag.get("id")
-        class_ = tag.get("class")
-        return tag.name == "li" and id_ and class_ and all("user_review" in a
-                                                           for a in (id_, class_))
-
-    @staticmethod
-    def _filter_score(tag: Tag) -> bool:
-        """Filter relevant 'li' element for user score.
-        """
-        class_ = tag.get("class")
-        return tag.name == "div" and class_ and "metascore_w" in class_
-
-    @staticmethod
-    def _filter_name(tag: Tag) -> bool:
-        """Filter relevant 'li' element for user name.
-        """
-        href = tag.get("href")
-        return tag.name == "a" and href and "/user/" in href
-
-    def _parse(self) -> List[BasicUser]:
-        """Parse input markup for user name and user score coupled in basic struct.
-        """
-        users = []
-        soup = BeautifulSoup(self._markup, "lxml")
-        elements = soup.find_all(self._pre_filter)
-        for element in elements:
-            result = element.find(self._filter_name)
-            name = result.text
-            result = element.find(self._filter_score)
-            score = int(result.text)
-            users.append(BasicUser(name, score))
-
-        return users
-
-
-class UserPageParser(PageParser):
-    """Parse user page for ratings and reviews counts.
-    """
-    def __init__(self, markup: str) -> None:
-        super().__init__(markup)
-        self.ratingscount, self.reviewscount = self._parse()
-
-    @staticmethod
-    def _filter_ratingscount(tag: Tag) -> bool:
-        """Filter soup for ratings 'span' element.
-        """
-        class_ = tag.get("class")
-        return tag.name == "span" and class_ and "total_summary_ratings" in class_
-
-    @staticmethod
-    def _filter_reviewscount(tag: Tag) -> bool:
-        """Filter soup for reviews 'span' element.
-        """
-        class_ = tag.get("class")
-        return tag.name == "span" and "total_summary_reviews" in class_
-
-    @staticmethod
-    def _filter_data(tag: Tag) -> bool:
-        """Filter relevant 'span' element for data.
-        """
-        return tag.name == "span"
-
-    def _parse(self) -> Tuple[int, int]:
-        """Parse input markup for user name and user score coupled in basic struct.
-        """
-        soup = BeautifulSoup(self._markup, "lxml")
-        result = soup.find(self._filter_ratingscount)
-        newresult = result.find(self._filter_data)
-        ratingscount = int(newresult.text)
-        result = soup.find(self._filter_reviewscount)
-        newresult = result.find(self._filter_data)
-        reviewscount = int(newresult.text)
-
-        return ratingscount, reviewscount
+    return users
 

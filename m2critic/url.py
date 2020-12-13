@@ -8,23 +8,12 @@
     @author: z33k
 
 """
-from enum import Enum
 import itertools
 from typing import Generator, Optional, Union
 
+from m2critic import GamingPlatform
 
 PREFIX = "https://www.metacritic.com/"
-
-
-class Platform(Enum):
-    PC = "pc"
-    PLAYSTATION_4 = "playstation-4"
-    PLAYSTATION_5 = "playstation-5"
-    XBOX_ONE = "xbox-one"
-    XBOX_SERIES_X = "xbox-series-x"
-    SWITCH = "switch"
-    STADIA = "stadia"
-    IOS = "ios"
 
 
 class UserReviewsUrlBuilder:
@@ -33,16 +22,23 @@ class UserReviewsUrlBuilder:
     SUFFIX = "user-reviews"
     PAGESTR = "?page="
 
-    def __init__(self, is_paginated: bool = True) -> None:
-        self.is_paginated = is_paginated
-        self.url: Optional[Union[str, Generator[str, None, None]]] = None
+    def __init__(self, start: Optional[int] = None, stop: Optional[int] = None) -> None:
+        self.start, self.stop = start, stop
+        self.start = 0 if start is None and stop is not None else start
+        self.urls: Optional[Union[str, Generator[str, None, None]]] = None
 
     # middle is determined in derived classes
-    def _geturl(self, middle: str) -> Union[str, Generator[str, None, None]]:
+    def _geturls(self, middle: str) -> Union[str, Generator[str, None, None]]:
+        """Get URL.
+        """
         prefix = PREFIX + middle
-        if self.is_paginated:
-            return (f"{prefix}{self.SUFFIX}{self.PAGESTR}{i}" for i in itertools.count())
-        return f"{prefix}{self.SUFFIX}"
+        if self.start is None and self.stop is None:
+            counter = itertools.count()
+        elif self.stop is not None:
+            counter = range(self.start, self.stop)
+        else:
+            counter = itertools.count(self.start)
+        return (f"{prefix}{self.SUFFIX}{self.PAGESTR}{i}" for i in counter)
 
 
 class GameUserReviewsUrlBuilder(UserReviewsUrlBuilder):
@@ -50,7 +46,15 @@ class GameUserReviewsUrlBuilder(UserReviewsUrlBuilder):
 
     Example (paginated): https://www.metacritic.com/game/pc/cyberpunk-2077/user-reviews?page=0
     """
-    def __init__(self, platform: Platform, url_game_name: str, is_paginated: bool = True) -> None:
-        super().__init__(is_paginated)
-        self.url = self._geturl(middle=f"game/{platform.value}/{url_game_name}/")
+    def __init__(self, platform: GamingPlatform, url_game_name: str,
+                 start: Optional[int] = None, stop: Optional[int] = None) -> None:
+        super().__init__(start, stop)
+        self.urls = self._geturls(middle=f"game/{platform.value}/{url_game_name}/")
         self.platform, self.url_game_name = platform, url_game_name
+
+
+def get_user_url(username: str) -> str:
+    """Get user page's URL.
+    """
+    return f"{PREFIX}user/{username}"
+
