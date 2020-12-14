@@ -11,7 +11,8 @@ from pprint import pprint
 from m2critic.url import GameUserReviewsUrlBuilder
 from m2critic import GamingPlatform
 from m2critic.parse import UserReviewsPageParser, UserPageParser
-from m2critic.scrape import scrape_pcgame_user_reviews
+from m2critic.scrape import scrape_pcgame_user_reviews, scrape_users
+from m2critic.debug import read_basic_users
 
 
 def run():
@@ -25,8 +26,14 @@ def run():
     # source = Path("debug/input/user.html")
     # parser = UserPageParser(source.read_text())
     # print(f"ratings count: {parser.ratingscount}, reviews count: {parser.reviewscount}")
-    file = Path("debug/output/cyberpunk_2077_basic_users.txt")
-    users = scrape_pcgame_user_reviews("cyberpunk-2077")
+    # file = Path("debug/output/cyberpunk_2077_basic_users.txt")
+    # users = scrape_pcgame_user_reviews("cyberpunk-2077")
+    # file.write_text("\n".join(str(u) for u in users), encoding="utf-8")
+    # users = read_basic_users(Path("debug/output/cyberpunk_2077_basic_users.txt"))
+    # pprint(users)
+    basic_users = read_basic_users(Path("debug/output/cyberpunk_2077_basic_users.txt"))
+    file = Path("debug/output/cyberpunk_2077_users.txt")
+    users = scrape_users(basic_users)
     file.write_text("\n".join(str(u) for u in users), encoding="utf-8")
 
 

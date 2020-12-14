@@ -8,12 +8,16 @@
     @author: z33k
 
 """
+from pathlib import Path
 from typing import List, Tuple
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from m2critic import BasicUser
+
+
+FORBIDDENSTR = "403 Forbidden"
 
 
 class PageParser:  # abstract
@@ -31,6 +35,8 @@ class UserReviewsPageParser(PageParser):
 
     def __init__(self, markup: str) -> None:
         super().__init__(markup)
+        if FORBIDDENSTR in markup:
+            raise RequestBlockedError("Server has blocked the request")
         if self.SENTINEL in self._markup or self.MOVIE_PAGE_SENTINEL in self._markup:
             raise ValueError("Invalid markup for parsing (page index too high)")
         self.users: List[BasicUser] = self._parse()
@@ -79,7 +85,15 @@ class UserPageParser(PageParser):
     """
     def __init__(self, markup: str) -> None:
         super().__init__(markup)
-        self.ratingscount, self.reviewscount = self._parse()
+        if FORBIDDENSTR in markup:
+            raise RequestBlockedError("Server has blocked the request")
+        # DEBUG
+        try:
+            self.ratingscount, self.reviewscount = self._parse()
+        except AttributeError:
+            file = Path("debug/output/error.html")
+            file.write_text(self._markup, encoding="utf-8")
+            raise RequestBlockedError("Server has blocked the request")
 
     @staticmethod
     def _filter_ratingscount(tag: Tag) -> bool:
@@ -114,3 +128,7 @@ class UserPageParser(PageParser):
 
         return ratingscount, reviewscount
 
+
+class RequestBlockedError(ValueError):
+    """Raise when server blocks a request.
+    """
