@@ -92,7 +92,8 @@ class UserPageParser(PageParser):
             self.ratingscount, self.reviewscount = self._parse()
         except AttributeError:
             file = Path("debug/output/error.html")
-            file.write_text(self._markup, encoding="utf-8")
+            with file.open("w", encoding="utf-8") as f:
+                f.write(self._markup)
             raise RequestBlockedError("Server has blocked the request")
 
     @staticmethod

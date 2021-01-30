@@ -54,13 +54,6 @@ class User:
     def cred(self) -> int:
         return self.reviewscount * 2 + self.ratingscount
 
-    def __repr__(self) -> str:
-        result = f"{type(self).__name__}("
-        result += f"name='{self.name}', "
-        result += f"score='{self.score}', "
-        result += f"cred={self.cred})"
-        return result
-
 
 class GamingPlatform(Enum):
     PC = "pc"
